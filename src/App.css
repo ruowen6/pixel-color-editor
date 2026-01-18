@@ -77,7 +77,7 @@
 
 .pixel-canvas {
   display: block;
-  background: #020617;
+  /* background: #020617; to avoid lowering the readability */
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.8);
   cursor: pointer; /* 新增：提示可以点击 */
