@@ -80,6 +80,31 @@
   /* background: #020617; to avoid lowering the readability */
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.8);
-  cursor: pointer; /* 新增：提示可以点击 */
+
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  
 }
 
+.pixel-canvas-preview {
+  cursor: default;
+}
+
+/* 覆盖 hover 效果，保持预览窗格静止 */
+.pixel-canvas-preview:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* 底部两个窗格的容器 */
+.canvas-row {
+  display: flex;
+  flex-wrap: wrap;        /* 小屏可以换行 */
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* 每个窗格的卡片样式（你如果已有 .canvas-panel，就只加 flex 部分） */
+.canvas-panel {
+  flex: 1;
+  min-width: 360px;
+}

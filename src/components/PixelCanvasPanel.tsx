@@ -1,3 +1,4 @@
+// src/components/PixelCanvasPanel.tsx
 import { useEffect, useRef, useState } from "react";
 import type { PixelGrid, Point } from "../types/pixel";
 
@@ -10,16 +11,37 @@ type Props = {
 export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 拖拽状态（刷子模式 + 矩形模式公用）
   const [isDragging, setIsDragging] = useState(false);
   const dragSetToRef = useRef<boolean | null>(null);
 
-  // 矩形框选状态（Shift + 拖动）
   const isRectModeRef = useRef(false);
   const rectStartRef = useRef<Point | null>(null);
   const rectEndRef = useRef<Point | null>(null);
 
-  // ✅ 绘制逻辑：从 App 原样搬来
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  // 监听 Shift 按下/松开，用来切换 cursor
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  // 绘制
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -46,7 +68,6 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 画像素块 + 选中 cover
     grid.pixels.forEach((p, idx) => {
       const x = idx % size;
       const y = Math.floor(idx / size);
@@ -54,22 +75,47 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       const px = x * cell;
       const py = y * cell;
 
-      ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${p.a / 255})`;
-      ctx.fillRect(px, py, cell, cell);
+      // ⭐ 判断是否是当前 hover 的像素
+      const isHovered = hoverIndex === idx;
+      const inflate = isHovered ? 2 : 0; // 放大 2px，可自行调
+      const drawX = px - inflate;
+      const drawY = py - inflate;
+      const drawSize = cell + inflate * 2;
 
+      // 用放大后的尺寸来画
+      ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${p.a / 255})`;
+      ctx.fillRect(drawX, drawY, drawSize, drawSize);
+
+      // ⭐ hover 描边（淡白色，只在 hover 且未选中时）
+      if (isHovered && !p.selected) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)"; // 半透明白
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(
+          drawX + 0.75,
+          drawY + 0.75,
+          drawSize - 1.5,
+          drawSize - 1.5
+      );
+    ctx.restore();
+    }
       if (p.selected) {
         ctx.save();
-        ctx.fillStyle = "rgba(21, 212, 250, 0.25)"; // 你现在用的蓝色 cover
-        ctx.fillRect(px, py, cell, cell);
+        ctx.fillStyle = "rgba(21, 212, 250, 0.25)";
+        ctx.fillRect(drawX, drawY, drawSize, drawSize);
         ctx.restore();
 
         ctx.strokeStyle = "white";
         ctx.lineWidth = 2;
-        ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+        ctx.strokeRect(
+          drawX + 1,
+          drawY + 1,
+          drawSize - 2,
+          drawSize - 2
+        );
       }
     });
 
-    // 网格线
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.lineWidth = 1;
     for (let i = 0; i <= size; i++) {
@@ -85,7 +131,6 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       ctx.stroke();
     }
 
-    // 矩形框选 overlay
     const start = rectStartRef.current;
     const end = rectEndRef.current;
     if (start && end) {
@@ -107,9 +152,8 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
       ctx.restore();
     }
-  }, [grid, bgColor]);
+  }, [grid, bgColor, hoverIndex]);
 
-  // ✅ 工具函数：从 App 原样搬来
   const getCellFromEvent = (
     e: React.MouseEvent<HTMLCanvasElement>,
     canvas: HTMLCanvasElement,
@@ -183,19 +227,31 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
 
       setGrid((prev) => {
         if (!prev) return prev;
-        const newPixels = prev.pixels.map((p, i) => (i === idx ? { ...p, selected: targetSelected } : p));
+        const newPixels = prev.pixels.map((p, i) =>
+          i === idx ? { ...p, selected: targetSelected } : p
+        );
         return { ...prev, pixels: newPixels };
       });
     }
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !grid) return;
+    if (!grid) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const cell = getCellFromEvent(e, canvas, grid);
-    if (!cell) return;
+    if (!cell) {
+      setHoverIndex(null);
+      return;
+    }
+
+    const idx = cellToIndex(cell, grid.size);
+    // ⭐ 始终更新 hoverIndex（无论是否在拖拽）
+    setHoverIndex(idx);
+
+    // 如果没在拖拽，后面不改选区
+    if (!isDragging) return;
 
     const target = dragSetToRef.current;
     if (target === null) return;
@@ -206,13 +262,14 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       return;
     }
 
-    const idx = cellToIndex(cell, grid.size);
     setGrid((prev) => {
       if (!prev) return prev;
       const oldPixel = prev.pixels[idx];
       if (oldPixel.selected === target) return prev;
 
-      const newPixels = prev.pixels.map((p, i) => (i === idx ? { ...p, selected: target } : p));
+      const newPixels = prev.pixels.map((p, i) =>
+        i === idx ? { ...p, selected: target } : p
+      );
       return { ...prev, pixels: newPixels };
     });
   };
@@ -232,16 +289,22 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
     setGrid((prev) => (prev ? { ...prev } : prev));
   };
 
+  const handleMouseLeave = () => {
+    setHoverIndex(null);
+    stopDragging();
+  };
+
   return (
     <section className="canvas-panel">
-      <h2>像素预览 & 选区</h2>
+      <h2>选区窗格</h2>
       <canvas
         ref={canvasRef}
         className="pixel-canvas"
+        style={{ cursor: isShiftPressed ? "crosshair" : "pointer" }} // ⭐ Shift 控制光标样式
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={stopDragging}
-        onMouseLeave={stopDragging}
+        onMouseLeave={handleMouseLeave}
       />
       {!grid && <p className="hint">目前还没有像素数据，请先上传一张图片。</p>}
     </section>
