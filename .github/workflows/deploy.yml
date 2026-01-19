@@ -1,0 +1,53 @@
+name: Deploy Vite React TS app to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]   # 你是 main 分支，这里不用改
+  workflow_dispatch:      # 允许你在 Actions 页面手动点 Deploy
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        # 如果你仓库里没有 package-lock.json
+        # 改成：
+        # run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist   # Vite 默认打包到 dist，如果你改过目录，这里要跟着改
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
