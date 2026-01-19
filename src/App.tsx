@@ -11,8 +11,13 @@ import {
 import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from "./utils/color";
 import { PixelCanvasPanel } from "./components/PixelCanvasPanel";
 import { PreviewCanvasPanel } from "./components/PreviewCanvasPanel";
+import { translations } from "./utils/translations";
+import type { Language } from "./utils/translations";
 
 function App() {
+  const [lang, setLang] = useState<Language>('zh');
+  const t = translations[lang];
+
   const [gridSize, setGridSize] = useState<GridSize>(16);
   const [grid, setGrid] = useState<PixelGrid | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -224,9 +229,41 @@ function App() {
   return (
     <div className="app-root">
       <header className="app-header">
-        <h1>Pixel Color Relation Editor</h1>
+        <h1>{t.title}</h1>
+        <div className="lang-switcher">
+          <button
+            onClick={() => setLang('en')}
+            style={{
+               padding: "6px 12px",
+               background: lang === 'en' ? "#3b82f6" : "transparent",
+               color: lang === 'en' ? "#fff" : "#94a3b8",
+               border: "none",
+               cursor: "pointer",
+               fontSize: "0.85rem",
+               fontWeight: lang === 'en' ? 600 : 400,
+               transition: "all 0.2s"
+            }}
+          >
+            English
+          </button>
+          <button
+            onClick={() => setLang('zh')}
+            style={{
+               padding: "6px 12px",
+               background: lang === 'zh' ? "#3b82f6" : "transparent",
+               color: lang === 'zh' ? "#fff" : "#94a3b8",
+               border: "none",
+               cursor: "pointer",
+               fontSize: "0.85rem",
+               fontWeight: lang === 'zh' ? 600 : 400,
+               transition: "all 0.2s"
+            }}
+          >
+            中文
+          </button>
+        </div>
         <p className="subtitle">
-          上方：基础设置 / 下方：左为选区窗格（可选择），右为预览窗格（只读）
+          {t.subtitle}
         </p>
       </header>
 
@@ -234,47 +271,48 @@ function App() {
         {/* 顶部控制区域 */}
         <section className="controls">
           <label className="control-group">
-            <span>选择像素尺寸：</span>
+            <span>{t.selectPixelSize}</span>
             <select
               value={gridSize}
               onChange={(e) => setGridSize(Number(e.target.value) as GridSize)}
+              style={{ width: "90px" }}
             >
               <option value={16}>16 × 16</option>
               <option value={32}>32 × 32</option>
             </select>
-            <span className="hint">会基于当前图片自动重算像素网格</span>
+            <span className="hint">{t.pixelSizeHint}</span>
           </label>
 
           <label className="control-group">
-            <span>上传图片：</span>
+            <span>{t.uploadImage}</span>
             <input type="file" accept="image/*" onChange={handleFileChange} />
           </label>
 
           <label className="control-group">
-            <span>画布背景颜色：</span>
+            <span>{t.canvasBgColor}</span>
             <input
               type="color"
               value={bgColor}
               onChange={(e) => setBgColor(e.target.value)}
             />
             <span className="hint">
-              对透明底图片特别有用，可以尝试白色、灰色等不同底色
+              {t.canvasBgHint}
             </span>
           </label>
 
           {grid && (
             <p className="hint">
-              当前像素网格：{grid.size} × {grid.size}，已选中{" "}
-              {grid.pixels.filter((p) => p.selected).length} 个像素块
+              {t.currentGrid}{grid.size} × {grid.size}{t.selectedPrefix}{" "}
+              {grid.pixels.filter((p) => p.selected).length}{t.selectedPixels}
             </p>
           )}
 
           <div className="hint" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            <div>操作提示：</div>
-            <div>• 单击：选中/取消单个格子</div>
-            <div>• 拖动：刷选一片（或刷取消一片）</div>
-            <div>• Shift + 拖动：矩形框选（松开后生效）</div>
-            <div>• 背景颜色：改变透明区域的“底色”效果</div>
+            <div>{t.manualTitle}</div>
+            <div>{t.manualClick}</div>
+            <div>{t.manualDrag}</div>
+            <div>{t.manualShiftDrag}</div>
+            <div>{t.manualBg}</div>
           </div>
         </section>
 
@@ -293,12 +331,14 @@ function App() {
             onBaseColorChange={handleBaseColorChange}
             keepLightness={keepLightness}
             onToggleKeepLightness={handleToggleKeepLightness}
+            t={t}
           />
           <PreviewCanvasPanel
             grid={previewGrid}
             bgColor={bgColor}
             isConfirmed={isConfirmed}
             onApplyChanges={handleApplyChanges}
+            t={t}
           />
         </div>
       </main>

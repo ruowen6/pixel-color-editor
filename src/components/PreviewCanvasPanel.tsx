@@ -8,6 +8,7 @@ type Props = {
   bgColor: string; // The canvas bg color (user selected)
   isConfirmed: boolean;
   onApplyChanges: () => void;
+  t: any;
 };
 
 export function PreviewCanvasPanel({
@@ -15,6 +16,7 @@ export function PreviewCanvasPanel({
   bgColor,
   isConfirmed,
   onApplyChanges,
+  t,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -97,10 +99,10 @@ export function PreviewCanvasPanel({
           marginBottom: "0.5rem",
         }}
       >
-        <h2 style={{ margin: 0 }}>预览窗格</h2>
+        <h2 style={{ margin: 0 }}>{t.previewPane}</h2>
         {isConfirmed && grid && (
           <button onClick={onApplyChanges} title="把当前的改色结果固化到网格中">
-            保存当前修改
+            {t.saveChanges}
           </button>
         )}
       </div>
@@ -112,7 +114,7 @@ export function PreviewCanvasPanel({
           pointerEvents: "none", // 完全禁止鼠标交互（防止误触）
         }}
       />
-      {!grid && <p className="hint">目前还没有像素数据，请先在上方上传图片。</p>}
+      {!grid && <p className="hint">{t.noDataPixel}</p>}
 
       {grid && (
         <div
@@ -123,7 +125,7 @@ export function PreviewCanvasPanel({
             borderTop: "1px solid #334155",
           }}
         >
-          <div style={{ marginBottom: "8px", fontWeight: 500 }}>导出选项</div>
+          <div style={{ marginBottom: "8px", fontWeight: 500 }}>{t.exportOptions}</div>
 
           <label
             style={{
@@ -142,7 +144,7 @@ export function PreviewCanvasPanel({
               onChange={(e) => setOnlySelected(e.target.checked)}
               style={{ accentColor: "#3b82f6" }}
             />
-            仅导出选区内容 (裁剪掉未选中像素)
+            {t.onlySelected}
           </label>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -165,7 +167,7 @@ export function PreviewCanvasPanel({
               }}
               title="保留透明通道，只有像素点有颜色"
             >
-              导出 PNG (透明)
+              {t.exportTransparent}
             </button>
             <button
               onClick={() => {
@@ -182,7 +184,7 @@ export function PreviewCanvasPanel({
               }}
               title={`将目前的背景色 (${bgColor}) 融合进图片`}
             >
-              导出 PNG (带背景)
+              {t.exportWithBg}
             </button>
           </div>
         </div>

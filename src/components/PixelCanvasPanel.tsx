@@ -15,6 +15,7 @@ type Props = {
   onBaseColorChange: (color: string) => void;
   keepLightness: boolean;
   onToggleKeepLightness: () => void;
+  t: any;
 };
 
 export function PixelCanvasPanel({
@@ -30,6 +31,7 @@ export function PixelCanvasPanel({
   onBaseColorChange,
   keepLightness,
   onToggleKeepLightness,
+  t,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -350,13 +352,13 @@ export function PixelCanvasPanel({
           marginBottom: "0.5rem",
         }}
       >
-        <h2 style={{ margin: 0 }}>选区窗格</h2>
+        <h2 style={{ margin: 0 }}>{t.selectionPane}</h2>
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={onConfirm} disabled={!grid || isConfirmed}>
-            确认选区
+            {t.confirmSelection}
           </button>
           <button onClick={onModify} disabled={!grid || !isConfirmed}>
-            修改选区
+            {t.modifySelection}
           </button>
         </div>
       </div>
@@ -377,7 +379,7 @@ export function PixelCanvasPanel({
         onMouseLeave={handleMouseLeave}
         onContextMenu={handleContextMenu}
       />
-      {!grid && <p className="hint">目前还没有像素数据，请先上传一张图片。</p>}
+      {!grid && <p className="hint">{t.noDataPixel}</p>}
 
       {/* 工具栏：只在 Confirmed 且有 curBase 时显示，放在 canvas 下方 */}
       {isConfirmed && basePixelIndex !== null && baseColorHex && (
@@ -406,7 +408,7 @@ export function PixelCanvasPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontWeight: 500 }}>修正基准色:</span>
+              <span style={{ fontWeight: 500 }}>{t.currentBaseColor}</span>
               <input
                 type="color"
                 value={baseColorHex}
@@ -418,7 +420,7 @@ export function PixelCanvasPanel({
                   border: "none",
                   padding: 0,
                 }}
-                title="点击修改颜色"
+                title="Select Color"
               />
               <code style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>
                 {baseColorHex}
@@ -454,7 +456,7 @@ export function PixelCanvasPanel({
                     .padStart(6, "0");
                 onBaseColorChange(randomHex);
               }}
-              title="随机颜色"
+              title={t.randomColor}
               style={{
                 background: "transparent",
                 border: "1px solid #475569",
@@ -488,10 +490,10 @@ export function PixelCanvasPanel({
               onChange={onToggleKeepLightness}
               style={{ accentColor: "#3b82f6" }}
             />
-            保持基准色明度
+            {t.keepLightness}
           </label>
           <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: "22px", marginTop: "-4px" }}>
-            (勾选后仅能修改色相，明度光谱修改功能已禁用)
+            {t.keepLightnessHint}
           </div>
 
           <div
@@ -502,7 +504,7 @@ export function PixelCanvasPanel({
               paddingTop: "6px",
             }}
           >
-            提示：右键点击选中区域的其他格子，可切换基准点。
+            {t.hintForBaseSwitch}
           </div>
         </div>
       )}
