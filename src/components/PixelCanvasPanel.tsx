@@ -6,9 +6,27 @@ type Props = {
   grid: PixelGrid | null;
   setGrid: React.Dispatch<React.SetStateAction<PixelGrid | null>>;
   bgColor: string;
+  isConfirmed: boolean;
+  onConfirm: () => void;
+  onModify: () => void;
+  basePixelIndex: number | null;
+  baseColorHex: string | null;
+  onSetBasePixel: (idx: number) => void;
+  onBaseColorChange: (color: string) => void;
 };
 
-export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
+export function PixelCanvasPanel({
+  grid,
+  setGrid,
+  bgColor,
+  isConfirmed,
+  onConfirm,
+  onModify,
+  basePixelIndex,
+  baseColorHex,
+  onSetBasePixel,
+  onBaseColorChange,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
@@ -87,32 +105,37 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       ctx.fillRect(drawX, drawY, drawSize, drawSize);
 
       // ⭐ hover 描边（淡白色，只在 hover 且未选中时）
-      if (isHovered && !p.selected) {
-      ctx.save();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)"; // 半透明白
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(
-          drawX + 0.75,
-          drawY + 0.75,
-          drawSize - 1.5,
-          drawSize - 1.5
-      );
-    ctx.restore();
-    }
-      if (p.selected) {
+      if (isHovered && !p.selected && !isConfirmed) {
         ctx.save();
-        ctx.fillStyle = "rgba(21, 212, 250, 0.25)";
-        ctx.fillRect(drawX, drawY, drawSize, drawSize);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.75)"; // 半透明白
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(drawX + 0.75, drawY + 0.75, drawSize - 1.5, drawSize - 1.5);
         ctx.restore();
+      }
 
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(
-          drawX + 1,
-          drawY + 1,
-          drawSize - 2,
-          drawSize - 2
-        );
+      if (p.selected) {
+        // If confirmed, fillStyle disappears, strokeStyle remains
+        if (!isConfirmed) {
+          ctx.save();
+          ctx.fillStyle = "rgba(21, 212, 250, 0.25)";
+          ctx.fillRect(drawX, drawY, drawSize, drawSize);
+          ctx.restore();
+        }
+
+        // Special border for Base Pixel
+        const isBase = idx === basePixelIndex;
+
+        ctx.strokeStyle = isBase ? "#FF0000" : "white"; // Red for base, white for others
+        ctx.lineWidth = isBase ? 3 : 2;
+        ctx.strokeRect(drawX + 1, drawY + 1, drawSize - 2, drawSize - 2);
+
+        // 如果是 Base Pixel，额外画个小标记（例如左上角小红点）
+        if (isBase) {
+          ctx.save();
+          ctx.fillStyle = "#FF0000";
+          ctx.fillRect(drawX, drawY, 6, 6);
+          ctx.restore();
+        }
       }
     });
 
@@ -133,7 +156,7 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
 
     const start = rectStartRef.current;
     const end = rectEndRef.current;
-    if (start && end) {
+    if (start && end && !isConfirmed) {
       const minX = Math.min(start.x, end.x);
       const maxX = Math.max(start.x, end.x);
       const minY = Math.min(start.y, end.y);
@@ -152,7 +175,7 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
       ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
       ctx.restore();
     }
-  }, [grid, bgColor, hoverIndex]);
+  }, [grid, bgColor, hoverIndex, isConfirmed, basePixelIndex]);
 
   const getCellFromEvent = (
     e: React.MouseEvent<HTMLCanvasElement>,
@@ -201,7 +224,7 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!grid) return;
+    if (!grid || isConfirmed) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -294,19 +317,149 @@ export function PixelCanvasPanel({ grid, setGrid, bgColor }: Props) {
     stopDragging();
   };
 
+  const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!grid || !isConfirmed) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const cell = getCellFromEvent(e, canvas, grid);
+    if (!cell) return;
+
+    const idx = cellToIndex(cell, grid.size);
+    const pixel = grid.pixels[idx];
+
+    // 只有已选中的像素才能设为基准
+    if (pixel.selected) {
+      onSetBasePixel(idx);
+    }
+  };
+
   return (
     <section className="canvas-panel">
-      <h2>选区窗格</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.5rem",
+        }}
+      >
+        <h2 style={{ margin: 0 }}>选区窗格</h2>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={onConfirm} disabled={!grid || isConfirmed}>
+            确认选区
+          </button>
+          <button onClick={onModify} disabled={!grid || !isConfirmed}>
+            修改选区
+          </button>
+        </div>
+      </div>
+      
       <canvas
         ref={canvasRef}
         className="pixel-canvas"
-        style={{ cursor: isShiftPressed ? "crosshair" : "pointer" }} // ⭐ Shift 控制光标样式
+        style={{
+          cursor: isConfirmed
+            ? "default"
+            : isShiftPressed
+            ? "crosshair"
+            : "pointer",
+        }} // ⭐ Shift 控制光标样式
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={stopDragging}
         onMouseLeave={handleMouseLeave}
+        onContextMenu={handleContextMenu}
       />
       {!grid && <p className="hint">目前还没有像素数据，请先上传一张图片。</p>}
+
+      {/* 工具栏：只在 Confirmed 且有 curBase 时显示，放在 canvas 下方 */}
+      {isConfirmed && basePixelIndex !== null && baseColorHex && (
+        <div
+          style={{
+            marginTop: "10px",
+            // 让工具栏宽度对齐 canvas
+            width: canvasRef.current ? canvasRef.current.width : "auto",
+            maxWidth: "100%",
+            boxSizing: "border-box", // 包含 padding
+            padding: "12px",
+            background: "#1e293b",
+            borderRadius: "4px",
+            fontSize: "0.9rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontWeight: 500 }}>修正基准色:</span>
+              <input
+                type="color"
+                value={baseColorHex}
+                onChange={(e) => onBaseColorChange(e.target.value)}
+                style={{
+                  cursor: "pointer",
+                  width: 40,
+                  height: 28,
+                  border: "none",
+                  padding: 0,
+                }}
+                title="点击修改颜色"
+              />
+              <code style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>
+                {baseColorHex}
+              </code>
+            </div>
+
+            <button
+              onClick={() => {
+                // 随机生成一个颜色
+                const randomHex =
+                  "#" +
+                  Math.floor(Math.random() * 16777215)
+                    .toString(16)
+                    .padStart(6, "0");
+                onBaseColorChange(randomHex);
+              }}
+              title="随机颜色"
+              style={{
+                background: "transparent",
+                border: "1px solid #475569",
+                borderRadius: "4px",
+                cursor: "pointer",
+                padding: "4px 8px",
+                fontSize: "1.2rem",
+                lineHeight: 1,
+                color: "#94a3b8",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              🎲
+            </button>
+          </div>
+
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#94a3b8",
+              borderTop: "1px solid #334155",
+              paddingTop: "6px",
+            }}
+          >
+            提示：右键点击选中区域的其他格子，可切换基准点。
+          </div>
+        </div>
+      )}
     </section>
   );
 }

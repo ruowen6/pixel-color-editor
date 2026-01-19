@@ -5,9 +5,10 @@ import type { PixelGrid } from "../types/pixel";
 type Props = {
   grid: PixelGrid | null;
   bgColor: string;
+  isConfirmed: boolean;
 };
 
-export function PreviewCanvasPanel({ grid, bgColor }: Props) {
+export function PreviewCanvasPanel({ grid, bgColor, isConfirmed }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -44,14 +45,17 @@ export function PreviewCanvasPanel({ grid, bgColor }: Props) {
       ctx.fillRect(px, py, cell, cell);
 
       if (p.selected) {
-        ctx.save();
-        ctx.fillStyle = ""; // a coloured cover
-        ctx.fillRect(px, py, cell, cell);
-        ctx.restore();
+        // Only show selection border if NOT confirmed
+        if (!isConfirmed) {
+          ctx.save();
+          // ctx.fillStyle = ""; // remove useless fill
+          // ctx.fillRect(px, py, cell, cell);
+          ctx.restore();
 
-        ctx.strokeStyle = "rgba(0, 255, 225, 0.85)"; // border style
-        ctx.lineWidth = 2;
-        ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+          ctx.strokeStyle = "rgba(0, 255, 225, 0.85)"; // border style
+          ctx.lineWidth = 2;
+          ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+        }
       }
     });
 
@@ -69,7 +73,7 @@ export function PreviewCanvasPanel({ grid, bgColor }: Props) {
       ctx.lineTo(canvas.width, pos);
       ctx.stroke();
     }
-  }, [grid, bgColor]);
+  }, [grid, bgColor, isConfirmed]);
 
   return (
     <section className="canvas-panel">

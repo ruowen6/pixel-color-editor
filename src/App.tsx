@@ -1,8 +1,14 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import "./App.css";
 import type { GridSize, PixelGrid } from "./types/pixel";
 import { dataUrlToPixelGrid } from "./utils/imageToGrid";
+import {
+  computeRelation,
+  type ColorRelation,
+  buildPreviewPixels,
+} from "./utils/relation";
+import { rgbToHex } from "./utils/color";
 import { PixelCanvasPanel } from "./components/PixelCanvasPanel";
 import { PreviewCanvasPanel } from "./components/PreviewCanvasPanel";
 
@@ -11,15 +17,33 @@ function App() {
   const [grid, setGrid] = useState<PixelGrid | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState<string>("#020617");
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  // 选区确认后的 颜色关系数据
+  const [relation, setRelation] = useState<ColorRelation | null>(null);
+  // 基准像素（Step 3 会用到，先定义好），默认取选区的第一个
+  const [basePixelIndex, setBasePixelIndex] = useState<number | null>(null);
+  // 【新增】基准像素当前颜色（可能是被改过的）
+  const [baseColorHex, setBaseColorHex] = useState<string | null>(null);
 
   // 上传后的图片 + 像素尺寸 => 像素网格
   useEffect(() => {
     if (!imageSrc) {
       setGrid(null);
+      setIsConfirmed(false);
+      setRelation(null);
+      setBasePixelIndex(null);
+      setBaseColorHex(null);
       return;
     }
     dataUrlToPixelGrid(imageSrc, gridSize)
-      .then(setGrid)
+      .then((newGrid) => {
+        setGrid(newGrid);
+        setIsConfirmed(false);
+        setRelation(null);
+        setBasePixelIndex(null);
+        setBaseColorHex(null);
+      })
       .catch((err) => console.error(err));
   }, [imageSrc, gridSize]);
 
@@ -34,6 +58,67 @@ function App() {
     reader.onload = () => setImageSrc(reader.result as string);
     reader.readAsDataURL(file);
   };
+
+  // 确认选区：计算颜色关系
+  const handleConfirm = () => {
+    if (!grid) return;
+    setIsConfirmed(true);
+
+    // 默认找第一个被选中的像素作为 base
+    // 如果一个都没选，就 undefined
+    const firstSelectedIndex = grid.pixels.findIndex((p) => p.selected);
+
+    if (firstSelectedIndex !== -1) {
+      setBasePixelIndex(firstSelectedIndex);
+      const rel = computeRelation(grid, firstSelectedIndex);
+      setRelation(rel);
+      // set color
+      const p = grid.pixels[firstSelectedIndex];
+      setBaseColorHex(rgbToHex({ r: p.r, g: p.g, b: p.b }));
+    } else {
+      setBasePixelIndex(null);
+      setRelation(null);
+      setBaseColorHex(null);
+    }
+  };
+
+  // 修改选区：重置关系
+  const handleModify = () => {
+    setIsConfirmed(false);
+    setRelation(null);
+    setBasePixelIndex(null);
+    setBaseColorHex(null);
+  };
+
+  // 设置新的基准像素（右键）
+  const handleSetBasePixel = (idx: number) => {
+    if (!grid) return;
+    setBasePixelIndex(idx);
+    
+    // 重新计算相对关系
+    // 注意：这个时候我们要以原始颜色计算关系，所以还是取 grid 里的
+    const rel = computeRelation(grid, idx);
+    setRelation(rel);
+
+    // 重置 baseColorHex 为该像素原始颜色 (或者如果要保留之前的修改意图？)
+    // 简单起见，切换基准点时重置为基准点的原始色
+    const p = grid.pixels[idx];
+    setBaseColorHex(rgbToHex({ r: p.r, g: p.g, b: p.b }));
+  };
+
+  const handleBaseColorChange = (color: string) => {
+    setBaseColorHex(color);
+  };
+
+  // 计算预览网格
+  const previewGrid = useMemo(() => {
+    if (!grid) return null;
+    // 如果没有 relation 或 baseColorHex，就等于原始 grid
+    if (!isConfirmed || !relation || !basePixelIndex || !baseColorHex) {
+      return grid;
+    }
+    return buildPreviewPixels(grid, relation, baseColorHex);
+  }, [grid, isConfirmed, relation, basePixelIndex, baseColorHex]);
 
   return (
     <div className="app-root">
@@ -94,8 +179,23 @@ function App() {
 
         {/* 下方：左右两个窗格并排 */}
         <div className="canvas-row">
-          <PixelCanvasPanel grid={grid} setGrid={setGrid} bgColor={bgColor} />
-          <PreviewCanvasPanel grid={grid} bgColor={bgColor} />
+          <PixelCanvasPanel
+            grid={grid}
+            setGrid={setGrid}
+            bgColor={bgColor}
+            isConfirmed={isConfirmed}
+            onConfirm={handleConfirm}
+            onModify={handleModify}
+            basePixelIndex={basePixelIndex}
+            baseColorHex={baseColorHex}
+            onSetBasePixel={handleSetBasePixel}
+            onBaseColorChange={handleBaseColorChange}
+          />
+          <PreviewCanvasPanel
+            grid={previewGrid}
+            bgColor={bgColor}
+            isConfirmed={isConfirmed}
+          />
         </div>
       </main>
     </div>
