@@ -178,6 +178,39 @@ function App() {
     });
   }
 
+  // 3.1: 保存当前修改
+  const handleApplyChanges = () => {
+    if (!previewGrid) return;
+    
+    // 1. 将当前的预览网格（改色后）变成真正的 grid
+    // 注意：我们要把 selected 状态清空吗？需求说“后续再次被修改，仍以当下的修改结果为起点”
+    // 通常意味着这一次改色完成了。为了避免混淆，最好是应用修改后，退出“已确认”状态，
+    // 或者保持“已确认”状态但重置 relation？
+    
+    // 如果我们只更新 grid，relation 依然指向旧的 basePixelIndex（还是同一个格子），
+    // 它的 baseColorHex 已经被我们改成新的了。
+    // 但是 relation.deltas 记录的是和 *旧的* baseHsl 的差值。
+    // 这里逻辑会有点绕。最稳健的做法是：
+    // -> 更新 grid 为 previewGrid (新的颜色已固化)
+    // -> 重置 relation 和 basePixelIndex (相当于这是一个新的起点)
+    // -> 用户需要重新选区（或者保留选区？），重新点 Confirmed，重新选基准点。
+    
+    // 需求中说：“如果后续再次被修改，仍以当下的修改结果为起点被进行后续的调整。”
+    // 这听起来像是把颜色“烤”进画布里。
+    
+    // 让我们先把颜色固化进 grid：
+    // *注意*：previewGrid 里的 pixels 是带着 selected 状态的。
+    // 如果想要用户可以继续无缝调整，我们可能需要保留选区状态。
+    
+    setGrid(previewGrid);
+    
+    // 重置“改色状态”
+    setIsConfirmed(false); // 退出确认模式，允许用户重新调整选区，或者直接再次点击确认
+    setRelation(null);
+    setBasePixelIndex(null);
+    setBaseColorHex(null);
+  };
+
   // 计算预览网格
   const previewGrid = useMemo(() => {
     if (!grid) return null;
@@ -265,6 +298,7 @@ function App() {
             grid={previewGrid}
             bgColor={bgColor}
             isConfirmed={isConfirmed}
+            onApplyChanges={handleApplyChanges}
           />
         </div>
       </main>

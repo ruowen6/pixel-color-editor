@@ -1,16 +1,28 @@
 // src/components/PreviewCanvasPanel.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PixelGrid } from "../types/pixel";
+import { exportGridToPng } from "../utils/exportPng";
 
 type Props = {
   grid: PixelGrid | null;
-  bgColor: string;
+  bgColor: string; // The canvas bg color (user selected)
   isConfirmed: boolean;
+  onApplyChanges: () => void;
 };
 
-export function PreviewCanvasPanel({ grid, bgColor, isConfirmed }: Props) {
+export function PreviewCanvasPanel({
+  grid,
+  bgColor,
+  isConfirmed,
+  onApplyChanges,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // 默认开启“仅导出选中”如果当前处于选择模式？或者总是提供全选？
+  // 为简单起见，我们提供4个按钮或者一个checkbox?
+  // 加上 "Scale" 选项。
+  const [onlySelected, setOnlySelected] = useState(false);
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -77,7 +89,21 @@ export function PreviewCanvasPanel({ grid, bgColor, isConfirmed }: Props) {
 
   return (
     <section className="canvas-panel">
-      <h2>预览窗格</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.5rem",
+        }}
+      >
+        <h2 style={{ margin: 0 }}>预览窗格</h2>
+        {isConfirmed && grid && (
+          <button onClick={onApplyChanges} title="把当前的改色结果固化到网格中">
+            保存当前修改
+          </button>
+        )}
+      </div>
       <canvas
         ref={canvasRef}
         className="pixel-canvas pixel-canvas-preview"
@@ -87,6 +113,80 @@ export function PreviewCanvasPanel({ grid, bgColor, isConfirmed }: Props) {
         }}
       />
       {!grid && <p className="hint">目前还没有像素数据，请先在上方上传图片。</p>}
+
+      {grid && (
+        <div
+          className="export-panel"
+          style={{
+            marginTop: "15px",
+            padding: "12px",
+            borderTop: "1px solid #334155",
+          }}
+        >
+          <div style={{ marginBottom: "8px", fontWeight: 500 }}>导出选项</div>
+
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.9rem",
+              marginBottom: "10px",
+              cursor: "pointer",
+              color: "#e2e8f0",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={onlySelected}
+              onChange={(e) => setOnlySelected(e.target.checked)}
+              style={{ accentColor: "#3b82f6" }}
+            />
+            仅导出选区内容 (裁剪掉未选中像素)
+          </label>
+
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => {
+                // 计算 scale: 16 -> 48 (x3), 32 -> ? (比如说也是 48? 那就是 x1.5? 或者保持 x3 -> 96?)
+                // 需求: "对于16*16...我希望下载时得到的图片大小是48*48" (即 x3)
+                // "那么对于32*32...合适的比例放大" (若也是 x3，则是 96*96)
+                // 我们可以统一用 scale=3
+                const scale = 3;
+                exportGridToPng(grid, {
+                  background: "transparent",
+                  bgColorHex: bgColor,
+                  onlySelected,
+                  scale,
+                  filename: `pixel-${grid.size}x${grid.size}${
+                    onlySelected ? "-selected" : ""
+                  }.png`,
+                });
+              }}
+              title="保留透明通道，只有像素点有颜色"
+            >
+              导出 PNG (透明)
+            </button>
+            <button
+              onClick={() => {
+                const scale = 3;
+                exportGridToPng(grid, {
+                  background: "color",
+                  bgColorHex: bgColor,
+                  onlySelected,
+                  scale,
+                  filename: `pixel-${grid.size}x${grid.size}${
+                    onlySelected ? "-selected" : ""
+                  }-bg.png`,
+                });
+              }}
+              title={`将目前的背景色 (${bgColor}) 融合进图片`}
+            >
+              导出 PNG (带背景)
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

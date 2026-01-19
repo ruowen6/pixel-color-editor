@@ -26,26 +26,46 @@
 
 .app-main {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  width: 100%;
+  max-width: 98vw;
+  margin: 0 auto;
   gap: 24px;
-  justify-content: center;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .controls {
-  padding: 16px 20px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 32px;
+  padding: 20px 24px;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.4);
-  min-width: 260px;
+  box-sizing: border-box;
+}
+
+/* Make the operations manual hint take full width */
+.controls > div.hint {
+  width: 100%;
+  margin-top: 4px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+
+.controls > p.hint {
+  margin: 0;
+  width: 100%; /* Force it to break row if needed, or let it flow */
+  line-height: 1.4;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
   font-size: 14px;
-  gap: 6px;
+  gap: 8px;
 }
 
 .control-group span {
@@ -82,7 +102,7 @@
   border: 1px solid rgba(148, 163, 184, 0.8);
 
   transition: box-shadow 0.15s ease, transform 0.15s ease;
-  
+  margin: 0 auto;
 }
 
 .pixel-canvas-preview {

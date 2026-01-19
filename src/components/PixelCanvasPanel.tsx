@@ -383,13 +383,14 @@ export function PixelCanvasPanel({
       {isConfirmed && basePixelIndex !== null && baseColorHex && (
         <div
           style={{
-            marginTop: "10px",
+            margin: "15px auto 0",
             // 让工具栏宽度对齐 canvas
             width: canvasRef.current ? canvasRef.current.width : "auto",
             maxWidth: "100%",
             boxSizing: "border-box", // 包含 padding
             padding: "12px",
             background: "#1e293b",
+            borderTop: "1px solid #334155",
             borderRadius: "4px",
             fontSize: "0.9rem",
             display: "flex",
@@ -487,8 +488,11 @@ export function PixelCanvasPanel({
               onChange={onToggleKeepLightness}
               style={{ accentColor: "#3b82f6" }}
             />
-            保持基准色明度 <br/>(勾选后仅能修改色相，明度光谱修改功能已禁用)
+            保持基准色明度
           </label>
+          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: "22px", marginTop: "-4px" }}>
+            (勾选后仅能修改色相，明度光谱修改功能已禁用)
+          </div>
 
           <div
             style={{
