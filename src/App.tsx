@@ -8,7 +8,7 @@ import {
   type ColorRelation,
   buildPreviewPixels,
 } from "./utils/relation";
-import { rgbToHex } from "./utils/color";
+import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from "./utils/color";
 import { PixelCanvasPanel } from "./components/PixelCanvasPanel";
 import { PreviewCanvasPanel } from "./components/PreviewCanvasPanel";
 
@@ -25,6 +25,9 @@ function App() {
   const [basePixelIndex, setBasePixelIndex] = useState<number | null>(null);
   // 【新增】基准像素当前颜色（可能是被改过的）
   const [baseColorHex, setBaseColorHex] = useState<string | null>(null);
+  
+  // 新增：保持基准色明度选项，默认勾选
+  const [keepLightness, setKeepLightness] = useState(true);
 
   // 上传后的图片 + 像素尺寸 => 像素网格
   useEffect(() => {
@@ -106,9 +109,74 @@ function App() {
     setBaseColorHex(rgbToHex({ r: p.r, g: p.g, b: p.b }));
   };
 
-  const handleBaseColorChange = (color: string) => {
-    setBaseColorHex(color);
+  const handleBaseColorChange = (newColor: string) => {
+    if (!keepLightness || !basePixelIndex || !grid) {
+      // 没有任何限制，或者没有基准点时，直接应用颜色
+      setBaseColorHex(newColor);
+      return;
+    }
+
+    // ⭐ 约束逻辑：保留原始像素的明度 L (和饱和度? 需求只强调了明度，但通常 Hue 改变时 S 最好也根据新颜色来，
+    // 不过需求说 "只能移动色相条儿"，这意味着 S 和 L 都应该被锁定？
+    // 让我们再看一遍需求："在进行颜色选区的时候，改变颜色的种类比如红色黄色绿色，这种改变叫色相的改变。明度...选取直接被限制住，无法移动，只能移动色相条儿。"
+    // 这通常意味着我们要保留原始的明度（L），可能也要保留饱和度（S）以维持“质感”，只变 H。
+    // 如果只保留 L，那么 S 会随用户选的改变。
+    // 通常 "Hue Shift" 意味着只变 H。为了保险，我们暂时只锁定 L，或者同时锁定 S 和 L。
+    // 既然已有的 "random" 逻辑里我们只生成 H，我们这里也尽量只取 H。
+    
+    // 获取当当前基准点 *原始* 的颜色信息（因为我们是基于原始关系计算的）
+    // 不过等等，用户的基准点可能已经被改过颜色了？
+    // 不，relation 是基于 *原始 grid* 计算的。
+    // 我们的 baseColorHex 是基准点 *现在* 的颜色。
+    // 约束应该是：新颜色的 L 必须等于 *原始* 颜色的 L（或当前已锁定的 L）。
+    
+    // 让我们始终锚定 *原始像素* 的 L。
+    const originalPixel = grid.pixels[basePixelIndex];
+    const originalHsl = rgbToHsl({ r: originalPixel.r, g: originalPixel.g, b: originalPixel.b });
+
+    // 计算用户新选颜色的 H
+    const newRgb = hexToRgb(newColor);
+    const newHsl = rgbToHsl(newRgb);
+
+    // 组合：新 H + 原 S + 原 L (完全锁定只准变色相)
+    // 或者：新 H + 新 S + 原 L (只锁定明度) -> 需求说 "明度...被限制住"，可能 S 是可以变的。
+    // 但是"随机功能也只能改变色相"暗示了 S 也可能要维持？
+    // 让我们先采取 "只锁定 L" 的策略，这是最符合字面意思的。
+    // 更新：为了更好的体验，通常 Hue 调整是保留 S 和 L 的。这里我们保留原图的 S 和 L，只采纳新颜色的 H。
+    // 这样用户在色板上乱点，也只会改变色相。
+    
+    const combinedHsl = {
+      h: newHsl.h,
+      s: originalHsl.s, // 既然说 "只能移动色相条"，那我们把 S 也锁了吧，防止乱
+      l: originalHsl.l,
+    };
+
+    const combinedRgb = hslToRgb(combinedHsl);
+    setBaseColorHex(rgbToHex(combinedRgb));
   };
+    
+  const handleToggleKeepLightness = () => {
+    setKeepLightness((prev) => {
+      const nextMode = !prev;
+      // 当切换回 "Keep Lightness" 时，也许应该立刻把当前的颜色校正回原始明度？
+      // 这是一个很好的 UX 细节。
+      if (nextMode && basePixelIndex !== null && grid && baseColorHex) {
+         const originalPixel = grid.pixels[basePixelIndex];
+         const originalHsl = rgbToHsl({ r: originalPixel.r, g: originalPixel.g, b: originalPixel.b });
+         const currentRgb = hexToRgb(baseColorHex);
+         const currentHsl = rgbToHsl(currentRgb);
+         
+         // 强制归位到原始 S/L
+         const fixedHsl = {
+             h: currentHsl.h,
+             s: originalHsl.s,
+             l: originalHsl.l
+         };
+         setBaseColorHex(rgbToHex(hslToRgb(fixedHsl)));
+      }
+      return nextMode;
+    });
+  }
 
   // 计算预览网格
   const previewGrid = useMemo(() => {
@@ -190,6 +258,8 @@ function App() {
             baseColorHex={baseColorHex}
             onSetBasePixel={handleSetBasePixel}
             onBaseColorChange={handleBaseColorChange}
+            keepLightness={keepLightness}
+            onToggleKeepLightness={handleToggleKeepLightness}
           />
           <PreviewCanvasPanel
             grid={previewGrid}
