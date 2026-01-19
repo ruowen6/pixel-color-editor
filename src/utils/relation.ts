@@ -8,7 +8,7 @@ export function computeRelation(grid: PixelGrid, baseIndex: number): ColorRelati
   const base = grid.pixels[baseIndex];
   const baseHsl = rgbToHsl({ r: base.r, g: base.g, b: base.b });
 
-  const deltas = grid.pixels.map((p, idx) => {
+  const deltas = grid.pixels.map((p) => {
     if (!p.selected) return null;
     const hsl = rgbToHsl({ r: p.r, g: p.g, b: p.b });
     return {

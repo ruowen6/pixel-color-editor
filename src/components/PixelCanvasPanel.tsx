@@ -430,25 +430,7 @@ export function PixelCanvasPanel({
             {/* Random Button */}
             <button
               onClick={() => {
-                // 随机生成色相 Hue (0-360)
-                const h = Math.floor(Math.random() * 360);
-                // 随机饱和度 S (50%-100%)
-                const s = 50 + Math.floor(Math.random() * 50);
-                // 随机亮度 L (30%-70%)
-                const l = 30 + Math.floor(Math.random() * 40);
-
-                // 根据 keepLightness 决定要不要用随机生成的 L
-                // 注意：这里生成的颜色只是作为 "input" 传给 App.tsx
-                // 但如果 keepLightness 为 true，App.tsx 收到这个颜色后，应该只取它的 Hue，而保留原 BaseColor 的 L。
-                // 不过 React 中最好是受控组件模式，所以我们在 onBaseColorChange 里可能传“完整颜色”，
-                // 但是 App.tsx 内部逻辑会根据 keepLightness 修正它。
-                // 或者更简单的：如果 keepLightness is ON，我们在生成随机色时使用原 baseColor 的 L 和 S？
-                // 需求说 "随机功能也只能改变色相"。如果是这样，我们应该只变 H。
-                
-                // 但这里我们只负责生成 HEX。逻辑可以在 App 里处理，或者在这里处理。
-                // 为了让 UI 行为一致，我们在这里生成全随机 HEX，然后由 App.tsx 的 handleBaseColorChange 统一处理约束。
-                
-                // 将 HSL 转回 HEX 比较麻烦，我们可以简单生成一个全随机 RGB，交给 App 处理。
+                // 随机生成一个全随机 RGB HEX，交给 App 处理。
                 const randomHex =
                   "#" +
                   Math.floor(Math.random() * 16777215)
