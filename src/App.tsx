@@ -293,6 +293,7 @@ function App() {
             <input
               type="color"
               value={bgColor}
+              className="bg-color-input"
               onChange={(e) => setBgColor(e.target.value)}
             />
             <span className="hint">

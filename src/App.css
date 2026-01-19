@@ -150,3 +150,11 @@
   flex: 1;
   min-width: 360px;
 }
+.bg-color-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+  background: transparent;
+  height: 40px;
+}
