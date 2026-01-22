@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PixelGrid } from "../types/pixel";
 import { exportGridToPng } from "../utils/exportPng";
+import { rgbToHsl, hslToRgb } from "../utils/color";
 
 type Props = {
   grid: PixelGrid | null;
@@ -24,6 +25,7 @@ export function PreviewCanvasPanel({
   // 为简单起见，我们提供4个按钮或者一个checkbox?
   // 加上 "Scale" 选项。
   const [onlySelected, setOnlySelected] = useState(false);
+  const [exportSize, setExportSize] = useState(48);
   
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -48,6 +50,26 @@ export function PreviewCanvasPanel({
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+// 计算选区综合色相的对比色
+    let selectionBorderColor = "rgba(0, 255, 225, 0.85)";
+    let sR = 0, sG = 0, sB = 0, sCount = 0;
+    for (const p of grid.pixels) {
+      if (p.selected) {
+        sR += p.r;
+        sG += p.g;
+        sB += p.b;
+        sCount++;
+      }
+    }
+    if (sCount > 0) {
+      const avg = { r: sR / sCount, g: sG / sCount, b: sB / sCount };
+      const hsl = rgbToHsl(avg);
+      // 色相旋转 180 度（补色）
+      const newH = (hsl.h + 180) % 360;
+      // 使用该色相下最鲜艳的颜色：饱和度 100%，亮度 50%
+      const rgb = hslToRgb({ h: newH, s: 1.0, l: 0.5 });
+      selectionBorderColor = `rgba(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)}, 0.85)`;
+    }
 
     grid.pixels.forEach((p, idx) => {
       const x = idx % size;
@@ -66,7 +88,7 @@ export function PreviewCanvasPanel({
           // ctx.fillRect(px, py, cell, cell);
           ctx.restore();
 
-          ctx.strokeStyle = "rgba(0, 255, 225, 0.85)"; // border style
+          ctx.strokeStyle = selectionBorderColor; // Use calculated color
           ctx.lineWidth = 2;
           ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
         }
@@ -147,14 +169,32 @@ export function PreviewCanvasPanel({
             {t.onlySelected}
           </label>
 
+          <div style={{ marginBottom: "12px", display: "flex", alignItems: "center" }}>
+            <span style={{ fontSize: "0.9rem", color: "#e2e8f0", marginRight: "8px" }}>导出尺寸：</span>
+            <select
+                value={exportSize}
+                onChange={(e) => setExportSize(Number(e.target.value))}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  backgroundColor: "#1e293b",
+                  color: "white",
+                  border: "1px solid #475569",
+                  fontSize: "0.9rem"
+                }}
+            >
+                {[16, 32, 48, 64, 128, 144, 256, 512].map((size) => (
+                  <option key={size} value={size}>
+                    {size} x {size}
+                  </option>
+                ))}
+            </select>
+          </div>
+
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <button
               onClick={() => {
-                // 计算 scale: 16 -> 48 (x3), 32 -> ? (比如说也是 48? 那就是 x1.5? 或者保持 x3 -> 96?)
-                // 需求: "对于16*16...我希望下载时得到的图片大小是48*48" (即 x3)
-                // "那么对于32*32...合适的比例放大" (若也是 x3，则是 96*96)
-                // 我们可以统一用 scale=3
-                const scale = 3;
+                const scale = exportSize / grid.size;
                 exportGridToPng(grid, {
                   background: "transparent",
                   bgColorHex: bgColor,
@@ -171,7 +211,7 @@ export function PreviewCanvasPanel({
             </button>
             <button
               onClick={() => {
-                const scale = 3;
+                const scale = exportSize / grid.size;
                 exportGridToPng(grid, {
                   background: "color",
                   bgColorHex: bgColor,

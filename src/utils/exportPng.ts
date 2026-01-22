@@ -45,14 +45,10 @@ export function exportGridToPng(
       // 但也可能希望导出带有底色的特定部件。
       
       // 简单处理：如果 background="color"，我们先填满背景色。
-      // 但是如果是 onlySelected，我们应该只填满“被选中区域”的背景色吗？还是全画布背景色？
-      // 通常是全画布背景色。
+      // 如果是 onlySelected，且选择了背景色导出，则未选中区域也会被背景色填充。
        
-      if (!opts.onlySelected) {
-          // 只有全图导出时，填充整个背景
-          ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
-          ctx.fillRect(0, 0, outputSize, outputSize);
-      }
+      ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
+      ctx.fillRect(0, 0, outputSize, outputSize);
   }
 
   for (let i = 0; i < grid.pixels.length; i++) {
