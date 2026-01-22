@@ -170,7 +170,7 @@ export function PreviewCanvasPanel({
           </label>
 
           <div style={{ marginBottom: "12px", display: "flex", alignItems: "center" }}>
-            <span style={{ fontSize: "0.9rem", color: "#e2e8f0", marginRight: "8px" }}>导出尺寸：</span>
+            <span style={{ fontSize: "0.9rem", color: "#e2e8f0", marginRight: "8px" }}>{t.exportSizeOptions}</span>
             <select
                 value={exportSize}
                 onChange={(e) => setExportSize(Number(e.target.value))}

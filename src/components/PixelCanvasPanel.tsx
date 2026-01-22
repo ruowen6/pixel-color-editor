@@ -342,6 +342,30 @@ export function PixelCanvasPanel({
     }
   };
 
+  // 全选：选择所有非透明像素
+  const selectAllNonTransparent = () => {
+    if (!grid) return;
+    setGrid((prev) => {
+      if (!prev) return prev;
+      const newPixels = prev.pixels.map((p) =>
+        p.a > 0 ? { ...p, selected: true } : p
+      );
+      return { ...prev, pixels: newPixels };
+    });
+  };
+
+  // 全部清除：取消所有选择
+  const clearAllSelection = () => {
+    if (!grid) return;
+    setGrid((prev) => {
+      if (!prev) return prev;
+      const newPixels = prev.pixels.map((p) =>
+        p.selected ? { ...p, selected: false } : p
+      );
+      return { ...prev, pixels: newPixels };
+    });
+  };
+
   return (
     <section className="canvas-panel">
       <div
@@ -359,6 +383,12 @@ export function PixelCanvasPanel({
           </button>
           <button onClick={onModify} disabled={!grid || !isConfirmed}>
             {t.modifySelection}
+          </button>
+          <button onClick={selectAllNonTransparent} disabled={!grid || isConfirmed}>
+            {t.selectAll}
+          </button>
+          <button onClick={clearAllSelection} disabled={!grid || isConfirmed}>
+            {t.clearAll}
           </button>
         </div>
       </div>

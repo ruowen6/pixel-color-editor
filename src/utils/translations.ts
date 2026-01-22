@@ -28,6 +28,8 @@ export const translations = {
     selectionPane: "选区窗格",
     confirmSelection: "确认选区",
     modifySelection: "修改选区",
+    selectAll: "全选",
+    clearAll: "全部清除",
     noDataPixel: "目前还没有像素数据，请先上传一张图片。",
     currentBaseColor: "当前基准色:",
     keepLightness: "保持基准色明度",
@@ -37,11 +39,12 @@ export const translations = {
     
     // Preview Canvas Panel
     previewPane: "预览窗格",
-    saveChanges: "保存当前修改",
+    saveChanges: "覆盖至原图",
     saveChangesTitle: "把当前的改色结果固化到网格中",
     noDataPreview: "目前还没有像素数据，请先在上方上传图片。",
     exportOptions: "导出选项",
     onlySelected: "仅导出选区内容 (裁剪掉未选中像素)",
+    exportSizeOptions: "导出尺寸：",
     exportTransparent: "导出透明背景PNG",
     exportWithBg: "导出带背景色PNG",
   },
@@ -70,8 +73,10 @@ export const translations = {
     
     // Pixel Canvas Panel
     selectionPane: "Selection Pane",
-    confirmSelection: "Confirm Selection",
-    modifySelection: "Modify Selection",
+    confirmSelection: "Confirm Sel.",
+    modifySelection: "Modify Sel.",
+    selectAll: "Sel. All",
+    clearAll: "Clear All",
     noDataPixel: "No pixel data yet. Please upload an image first.",
     currentBaseColor: "Base Color:",
     keepLightness: "Keep Base Lightness",
@@ -81,11 +86,12 @@ export const translations = {
     
     // Preview Canvas Panel
     previewPane: "Preview Pane",
-    saveChanges: "Save Changes",
+    saveChanges: "Overwrite Selected Pixels",
     saveChangesTitle: "Bake current color changes into the grid",
     noDataPreview: "No pixel data yet. Please upload an image above.",
     exportOptions: "Export Options",
     onlySelected: "Export Selection Only (Crop unused)",
+    exportSizeOptions: "Export Size:",
     exportTransparent: "Export Transparent PNG",
     exportWithBg: "Export PNG with BG Color",
   }
